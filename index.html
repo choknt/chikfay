@@ -15,14 +15,10 @@
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-6">
     <h1 class="text-2xl font-semibold text-center text-gray-800 mb-1">ค้นหาชื่อผู้เล่นด้วย PlayFabId</h1>
-    <p class="text-center text-gray-500 mb-6">กรอก <b>Title Player Account ID</b> (PlayFabId)</p>
+    <p class="text-center text-gray-500 mb-6">Title ID: <b>2F5F0</b></p>
 
     <div id="alertBox" class="hidden mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm"></div>
     <div id="infoBox"  class="hidden mb-4 rounded-md border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2 text-sm"></div>
-
-    <label class="block text-sm font-medium text-gray-700 mb-1" for="titleId">Title ID</label>
-    <input id="titleId" type="text" class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
-           placeholder="YOUR_PLAYFAB_TITLE_ID" />
 
     <label class="block text-sm font-medium text-gray-700 mb-1" for="playFabId">Title Player Account ID (PlayFabId)</label>
     <input id="playFabId" type="text" class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
@@ -40,6 +36,8 @@
   </div>
 
   <script>
+    const TITLE_ID = "2F5F0"; // Title ID ตายตัว
+
     function $(id){ return document.getElementById(id); }
     function showError(msg){ const b=$('alertBox'); b.textContent=msg; b.classList.remove('hidden'); }
     function hideError(){ $('alertBox').classList.add('hidden'); }
@@ -49,19 +47,18 @@
 
     let sessionReady = false;
 
-    async function ensureTempLogin(titleId){
+    async function ensureTempLogin(){
       return new Promise(resolve=>{
         if (sessionReady) return resolve(true);
-        if (!titleId) return resolve(false);
 
         if (typeof PlayFabClientSDK === 'undefined') {
           showError('โหลด PlayFab SDK ไม่สำเร็จ'); return resolve(false);
         }
-        PlayFab.settings.titleId = titleId;
+        PlayFab.settings.titleId = TITLE_ID;
 
         const customId = 'web-lookup-' + Math.random().toString(36).slice(2);
         PlayFabClientSDK.LoginWithCustomID({
-          TitleId: titleId,
+          TitleId: TITLE_ID,
           CustomId: customId,
           CreateAccount: true
         }, function(ok, err){
@@ -76,7 +73,6 @@
     }
 
     function getNiceNameFromAccountInfo(accInfo){
-      // รองรับโครงสร้างทั้งแบบ data.AccountInfo และ AccountInfo
       const a = accInfo?.data?.AccountInfo || accInfo?.AccountInfo || null;
       if (!a) return null;
       const dn = a?.TitleInfo?.DisplayName;
@@ -99,23 +95,17 @@
     $('lookupBtn').addEventListener('click', async ()=>{
       hideError(); hideInfo(); $('result').textContent = '—';
 
-      const titleId = $('titleId').value.trim();
       const playFabId = $('playFabId').value.trim();
-
-      if (!titleId || titleId === 'YOUR_PLAYFAB_TITLE_ID') return showError('กรุณากรอก Title ID ให้ถูกต้อง');
       if (!playFabId) return showError('กรุณากรอก PlayFabId');
 
       setBusy(true);
-      const okLogin = await ensureTempLogin(titleId);
+      const okLogin = await ensureTempLogin();
       if (!okLogin) { setBusy(false); return; }
 
       const res = await lookupNameByPlayFabId(playFabId);
       setBusy(false);
 
       if (!res.ok) {
-        // ข้อผิดพลาดพบบ่อย:
-        // - "User not found" → PlayFabId ไม่อยู่ใน Title นี้
-        // - "NotAuthenticated" → ยังไม่ได้ login ด้วย TitleId เดียวกัน
         showError(res.error || 'ค้นหาไม่สำเร็จ');
         return;
       }
@@ -128,9 +118,6 @@
 
       $('result').textContent = res.name;
     });
-
-    // เติม TitleId อัตโนมัติเพื่อกันพิมพ์ตกหล่น (ลบได้ถ้าไม่ต้องการ)
-    $('titleId').placeholder = 'YOUR_PLAYFAB_TITLE_ID';
   </script>
 </body>
 </html>
