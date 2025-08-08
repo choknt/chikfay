@@ -2,107 +2,189 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PlayFab Login Demo</title>
-  <!-- Tailwind CSS (Play CDN for quick setup) -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms" defer></script>
-  <!-- PlayFab JavaScript SDK -->
-  <script src="https://download.playfab.com/PlayFabClientApi.js" defer></script>
-  <style>
-    /* เพิ่ม style โหลดฟอนต์ภาษาไทย (ถ้าต้องการ) */
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap');
-    body { font-family: 'Sarabun', sans-serif; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PlayFab Login</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+
+  <!-- ฟอนต์ไทย (ไม่บังคับ) -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet" />
+  <style> body{ font-family: 'Sarabun', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; } </style>
+
+  <!-- PlayFab JavaScript SDK (ต้องมาก่อนสคริปต์ของเรา) -->
+  <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-  <!-- Container กล่องฟอร์มล็อกอิน -->
-  <div id="formContainer" class="bg-white p-6 rounded-lg shadow-md w-full max-w-sm">
-    <h1 class="text-2xl font-semibold mb-5 text-center text-gray-800">เข้าสู่ระบบผู้เล่น</h1>
-    <!-- ฟิลด์ Username -->
-    <div class="mb-4">
-      <label for="username" class="block mb-1 font-medium text-gray-700">ชื่อผู้ใช้ (Username)</label>
-      <input type="text" id="username" name="username" required 
-             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200 focus:border-blue-500" 
-             placeholder="กรอกชื่อผู้ใช้" />
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+  <!-- กล่องฟอร์ม -->
+  <div id="formContainer" class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6">
+    <h1 class="text-2xl font-semibold text-center text-gray-800 mb-1">เข้าสู่ระบบผู้เล่น</h1>
+    <p class="text-center text-gray-500 mb-6">PlayFab Login (Username & Password)</p>
+
+    <div id="alertBox" class="hidden mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm"></div>
+
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="username">ชื่อผู้ใช้ (Username)</label>
+    <input id="username" type="text" autocomplete="username"
+           class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
+           placeholder="เช่น myplayer01" />
+
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="password">รหัสผ่าน (Password)</label>
+    <div class="relative mb-6">
+      <input id="password" type="password" autocomplete="current-password"
+             class="w-full rounded-lg border-gray-300 px-3 py-2 pr-12 focus:border-blue-500 focus:ring-blue-200"
+             placeholder="••••••••" />
+      <button type="button" id="togglePw"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm px-2 py-1 rounded hover:bg-gray-100">
+        แสดง
+      </button>
     </div>
-    <!-- ฟิลด์ Password -->
-    <div class="mb-6">
-      <label for="password" class="block mb-1 font-medium text-gray-700">รหัสผ่าน (Password)</label>
-      <input type="password" id="password" name="password" required 
-             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200 focus:border-blue-500" 
-             placeholder="กรอกรหัสผ่าน" />
-    </div>
-    <!-- ปุ่ม Login -->
-    <button id="loginButton" type="button" 
-            class="w-full bg-blue-600 text-white font-medium py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-      Login
+
+    <button id="loginButton" type="button"
+            class="w-full rounded-lg bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+      เข้าสู่ระบบ
     </button>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      หมายเหตุ: หน้านี้ใช้ PlayFab Client API จึงไม่ต้องใช้ API Key/Secret
+    </p>
   </div>
 
-  <!-- ส่วนแสดงข้อความต้อนรับหลังล็อกอินสำเร็จ (ซ่อนไว้ก่อน) -->
+  <!-- หน้าหลังล็อกอิน -->
   <div id="messageContainer" class="hidden text-center">
-    <h2 id="welcomeMessage" class="text-xl font-bold text-green-600 mt-8"></h2>
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-8">
+      <h2 class="text-2xl font-bold text-green-600">ล็อกอินสำเร็จ</h2>
+      <p class="mt-3 text-gray-700">ล็อกอินสำเร็จในชื่อผู้เล่น: <span id="playerName" class="font-semibold"></span></p>
+      <p class="mt-1 text-sm text-gray-500">Session พร้อมเรียก API ฝั่ง Client ต่อได้</p>
+      <button id="backBtn"
+              class="mt-6 rounded-lg bg-gray-800 text-white px-4 py-2 hover:bg-gray-900">
+        ออกจากระบบ / กลับ
+      </button>
+    </div>
   </div>
 
-  <!-- Script ส่วนการทำงานของ PlayFab Login -->
+  <!-- สคริปต์หลัก -->
   <script>
-    // ตั้งค่า Title ID ของเกม (ต้องแก้ไขเป็น TitleId จริงของคุณก่อนใช้งาน)
-    var playFabTitleId = "2F5F0";
-    PlayFab.settings.titleId = playFabTitleId;
+    // >>>>> ใส่ Title ID ของคุณที่นี่ <<<<<
+    var PLAYFAB_TITLE_ID = "2F5F0";
 
-    // ฟังก์ชันช่วยแสดงข้อความผิดพลาด (ถ้าต้องการ)
-    function showError(message) {
-      alert(message);
+    // ป้องกันกรณี SDK โหลดไม่สำเร็จ
+    if (typeof PlayFabClientSDK === 'undefined') {
+      document.getElementById('alertBox').classList.remove('hidden');
+      document.getElementById('alertBox').textContent = 'โหลด PlayFab SDK ไม่สำเร็จ กรุณารีเฟรชหน้า หรือเช็คเครือข่าย';
+    } else {
+      PlayFab.settings.titleId = PLAYFAB_TITLE_ID;
     }
 
-    // เพิ่ม event ให้ปุ่ม Login เมื่อถูกคลิก
-    document.getElementById('loginButton').addEventListener('click', function () {
-      var username = document.getElementById('username').value;
-      var password = document.getElementById('password').value;
-      if (!username || !password) {
-        showError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+    // Helper
+    function $(id){ return document.getElementById(id); }
+
+    function setLoading(loading){
+      const btn = $('loginButton');
+      if (loading) {
+        btn.disabled = true;
+        btn.textContent = 'กำลังเข้าสู่ระบบ...';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'เข้าสู่ระบบ';
+      }
+    }
+
+    function showError(msg){
+      const box = $('alertBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+    function hideError(){
+      $('alertBox').classList.add('hidden');
+    }
+
+    function getSafePlayerName(accountInfo, fallbackUsername){
+      // พยายามใช้ DisplayName ก่อน ถ้าไม่มีใช้ Username
+      if (accountInfo && accountInfo.TitleInfo && accountInfo.TitleInfo.DisplayName) {
+        return accountInfo.TitleInfo.DisplayName;
+      }
+      if (accountInfo && accountInfo.Username) {
+        return accountInfo.Username;
+      }
+      return fallbackUsername || 'ผู้เล่น';
+    }
+
+    // Toggle password visibility
+    $('togglePw').addEventListener('click', function(){
+      const pw = $('password');
+      const isPw = pw.type === 'password';
+      pw.type = isPw ? 'text' : 'password';
+      this.textContent = isPw ? 'ซ่อน' : 'แสดง';
+    });
+
+    // Enter เพื่อกดล็อกอิน
+    ['username','password'].forEach(id=>{
+      $(id).addEventListener('keydown', e=>{
+        if (e.key === 'Enter') $('loginButton').click();
+      });
+    });
+
+    // ปุ่มล็อกอิน
+    $('loginButton').addEventListener('click', function(){
+      hideError();
+      const username = $('username').value.trim();
+      const password = $('password').value.trim();
+
+      if (!PLAYFAB_TITLE_ID || PLAYFAB_TITLE_ID === 'YOUR_PLAYFAB_TITLE_ID') {
+        showError('ยังไม่ได้ตั้งค่า Title ID (กรุณาแก้ตัวแปร PLAYFAB_TITLE_ID ในสคริปต์)');
         return;
       }
-      // เรียกใช้ PlayFab API เพื่อ Login ด้วย Username/Password
+      if (!username || !password) {
+        showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+        return;
+      }
+      if (typeof PlayFabClientSDK === 'undefined') {
+        showError('ไม่พบ PlayFabClientSDK กรุณารีเฟรชหน้า');
+        return;
+      }
+
+      setLoading(true);
+
       PlayFabClientSDK.LoginWithPlayFab({
-        TitleId: playFabTitleId,
+        TitleId: PLAYFAB_TITLE_ID,
         Username: username,
         Password: password
-      }, function(result, error) {
-        if (result) {
-          console.log("Login successful:", result);
-          // ล็อกอินสำเร็จ -> เรียก AccountInfo เพื่อดึงชื่อผู้เล่น
-          PlayFabClientSDK.GetAccountInfo({}, function(infoResult, infoError) {
-            if (infoResult) {
-              // ดึงข้อมูล AccountInfo (อาจอยู่ใน infoResult.data สำหรับ SDK เวอร์ชั่นใหม่)
-              var accountInfo = infoResult.data ? infoResult.data.AccountInfo : infoResult.AccountInfo;
-              // หาชื่อผู้เล่นที่จะใช้แสดง (DisplayName ถ้ามี, ถ้าไม่มีก็ใช้ Username)
-              var playerName = "";
-              if (accountInfo && accountInfo.TitleInfo && accountInfo.TitleInfo.DisplayName) {
-                playerName = accountInfo.TitleInfo.DisplayName;
-              } else if (accountInfo && accountInfo.Username) {
-                playerName = accountInfo.Username;
-              } else {
-                playerName = username;
-              }
-              // แสดงข้อความต้อนรับพร้อมชื่อผู้เล่น
-              document.getElementById('welcomeMessage').textContent = "ล็อกอินสำเร็จในชื่อผู้เล่น: " + playerName;
-              // ซ่อนฟอร์มล็อกอิน และแสดงข้อความสำเร็จ
-              document.getElementById('formContainer').classList.add('hidden');
-              document.getElementById('messageContainer').classList.remove('hidden');
-            } else {
-              console.error("GetAccountInfo error:", infoError);
-              showError("ล็อกอินสำเร็จ แต่เกิดข้อผิดพลาดในการดึงข้อมูลผู้เล่น");
-            }
-          });
-        } else {
-          console.error("Login error:", error);
-          // แสดงข้อความผิดพลาดกรณีล็อกอินไม่สำเร็จ
-          var errorMsg = error && error.errorMessage ? error.errorMessage : "ไม่สามารถเข้าสู่ระบบได้";
-          showError("เกิดข้อผิดพลาดในการล็อกอิน: " + errorMsg);
+      }, function(result, error){
+        if (!result) {
+          const msg = (error && error.errorMessage) || 'ไม่สามารถเข้าสู่ระบบได้';
+          setLoading(false);
+          showError('เกิดข้อผิดพลาดในการล็อกอิน: ' + msg);
+          return;
         }
+
+        // ได้ Session แล้ว -> ขอข้อมูลผู้เล่น
+        PlayFabClientSDK.GetAccountInfo({}, function(infoResult, infoError){
+          setLoading(false);
+          if (!infoResult) {
+            showError('ล็อกอินสำเร็จ แต่ดึงข้อมูลผู้เล่นไม่สำเร็จ');
+            return;
+          }
+
+          // รองรับทั้งรูปแบบ data.AccountInfo และ AccountInfo (ต่างกันตามเวอร์ชัน SDK)
+          var accountInfo = infoResult.data ? infoResult.data.AccountInfo : infoResult.AccountInfo;
+          var playerName = getSafePlayerName(accountInfo, username);
+
+          $('playerName').textContent = playerName;
+          $('formContainer').classList.add('hidden');
+          $('messageContainer').classList.remove('hidden');
+        });
       });
+    });
+
+    // ปุ่มกลับ/ออกจากระบบ
+    $('backBtn').addEventListener('click', function(){
+      $('messageContainer').classList.add('hidden');
+      $('formContainer').classList.remove('hidden');
+      $('username').value = '';
+      $('password').value = '';
+      hideError();
     });
   </script>
 </body>
-</html>
+  </html>
