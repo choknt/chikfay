@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Player Profile Lookup (PlayFabId → Profile & Clan)</title>
+  <title>Player Profile & Clan Lookup</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet" />
-  <style> body{ font-family:'Sarabun',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial; } </style>
+  <style>body{ font-family:'Sarabun',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial; }</style>
   <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
 </head>
 <body class="bg-zinc-900 min-h-screen flex items-center justify-center p-4 text-zinc-100">
@@ -21,24 +21,20 @@
 
     <label for="pfid" class="block text-sm mb-1 opacity-80">Title Player Account ID (PlayFabId)</label>
     <input id="pfid" type="text" class="mb-4 w-full rounded-lg bg-zinc-900 border-zinc-700 px-3 py-2 focus:border-indigo-400 focus:ring-indigo-300"
-           placeholder="เช่น 8C7EE7546DFB52BE" />
+           placeholder="เช่น 260EF77E1F3AB550" />
 
     <button id="lookup" class="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white py-2.5 font-medium">ค้นหา</button>
 
     <div id="card" class="hidden mt-6 rounded-xl bg-zinc-900/60 border border-zinc-700 p-5">
-      <div class="flex items-start gap-3">
-        <div>
-          <div id="displayName" class="text-xl font-bold">—</div>
-          <div id="username" class="text-sm opacity-70">—</div>
-        </div>
+      <div>
+        <div id="displayName" class="text-xl font-bold">—</div>
+        <div id="username" class="text-sm opacity-70">—</div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 text-sm">
+      <div class="grid grid-cols-2 gap-4 mt-5 text-sm">
         <div><div class="opacity-60">Player ID</div><div id="playFabId" class="font-medium break-all">—</div></div>
         <div><div class="opacity-60">Created</div><div id="created" class="font-medium">—</div></div>
-        <div><div class="opacity-60">Last Login</div><div id="lastLogin" class="font-medium">—</div></div>
-        <div><div class="opacity-60">Origination</div><div id="origination" class="font-medium">—</div></div>
-        <div class="col-span-2 md:col-span-3">
+        <div class="col-span-2">
           <div class="opacity-60">Clan</div>
           <div id="clan" class="font-medium">—</div>
         </div>
@@ -49,21 +45,22 @@
   </div>
 
   <script>
-    const TITLE_ID = "F7659";
-    function $(id){ return document.getElementById(id); }
-    function err(msg){ const a=$('alert'); a.textContent=msg; a.classList.remove('hidden'); }
-    function clearErr(){ $('alert').classList.add('hidden'); }
-    function fmt(dt){ if(!dt) return '—'; const d=new Date(dt); if(isNaN(d)) return dt; return d.toLocaleString(); }
+    const TITLE_ID = "2F5F0";
+    const CLOUDSCRIPT_FUNC = "GetClanByPlayFabId";
+
+    const $ = id => document.getElementById(id);
+    const showErr = m => { const a=$('alert'); a.textContent=m; a.classList.remove('hidden'); };
+    const clearErr = () => $('alert').classList.add('hidden');
+    const fmt = dt => { if(!dt) return '—'; const d=new Date(dt); return isNaN(d) ? String(dt) : d.toLocaleString(); };
 
     let sessionReady = false;
-    async function ensureLogin(){
-      return new Promise(res=>{
-        if(sessionReady) return res(true);
-        if(typeof PlayFabClientSDK==='undefined'){ err('โหลด PlayFab SDK ไม่สำเร็จ'); return res(false); }
+    function ensureLogin() {
+      return new Promise(res => {
+        if (sessionReady) return res(true);
         PlayFab.settings.titleId = TITLE_ID;
-        const cid = 'lookup-'+Math.random().toString(36).slice(2);
-        PlayFabClientSDK.LoginWithCustomID({ TitleId: TITLE_ID, CustomId: cid, CreateAccount: true }, (ok, e)=>{
-          if(!ok){ err('Login ชั่วคราวล้มเหลว: '+(e?.errorMessage||'')); return res(false); }
+        const cid = 'lookup-' + Math.random().toString(36).slice(2);
+        PlayFabClientSDK.LoginWithCustomID({ TitleId: TITLE_ID, CustomId: cid, CreateAccount: true }, (ok, e) => {
+          if (!ok) { showErr('Login ล้มเหลว: ' + (e?.errorMessage || '')); return res(false); }
           sessionReady = true; res(true);
         });
       });
@@ -72,33 +69,28 @@
     function getAccountInfo(playFabId){
       return new Promise(res=>{
         PlayFabClientSDK.GetAccountInfo({ PlayFabId: playFabId }, (ok, e)=>{
-          if(!ok) return res({ ok:false, error: e?.errorMessage||'GetAccountInfo failed' });
+          if(!ok) return res({ ok:false, error: e?.errorMessage || 'GetAccountInfo failed' });
           const a = ok.data?.AccountInfo || ok.AccountInfo || {};
-          const info = {
+          res({ ok:true, info: {
             displayName: a?.TitleInfo?.DisplayName || null,
             username: a?.Username || null,
-            created: a?.TitleInfo?.Created || null,
-            lastLogin: a?.TitleInfo?.LastLogin || null,
-            origination: a?.TitleInfo?.Origination || null
-          };
-          res({ ok:true, info });
+            created: a?.TitleInfo?.Created || null
+          }});
         });
       });
     }
 
-    function getClanReadOnly(playFabId){
+    function getClanViaCloudScript(playFabId){
       return new Promise(res=>{
-        PlayFabClientSDK.GetUserReadOnlyData({ PlayFabId: playFabId, Keys: ["clanName","clanTag","clanId"] }, (ok, e)=>{
-          if(!ok) return res({ ok:false, error: e?.errorMessage||'GetUserReadOnlyData failed' });
-          const d = ok.data?.Data || {};
-          const name = d.clanName?.Value || null;
-          const tag  = d.clanTag?.Value || null;
-          const id   = d.clanId?.Value || null;
-          let text = null;
-          if(name || tag || id){
-            text = `${tag?`[${tag}] `:''}${name||''}${id?` (${id})`:''}`.trim();
-          }
-          res({ ok:true, text });
+        PlayFabClientSDK.ExecuteCloudScript({
+          FunctionName: CLOUDSCRIPT_FUNC,
+          FunctionParameter: { playFabId },
+          GeneratePlayStreamEvent: false
+        }, (ok, err) => {
+          if (!ok) return res({ ok:false, error: err?.errorMessage || 'ExecuteCloudScript failed' });
+          const r = ok.data?.FunctionResult;
+          if (!r) return res({ ok:false, error: 'No FunctionResult' });
+          res(r);
         });
       });
     }
@@ -106,31 +98,24 @@
     $('lookup').addEventListener('click', async ()=>{
       clearErr();
       const id = $('pfid').value.trim();
-      if(!id) return err('กรุณากรอก PlayFabId');
+      if (!id) return showErr('กรุณากรอก PlayFabId');
 
-      // login session ชั่วคราว
       const okLogin = await ensureLogin();
-      if(!okLogin) return;
+      if (!okLogin) return;
 
-      // ดึงโปรไฟล์พื้นฐาน
       const acc = await getAccountInfo(id);
-      if(!acc.ok){
-        err(acc.error || 'ค้นหาไม่สำเร็จ');
-        return;
-      }
+      if (!acc.ok) return showErr(acc.error || 'ค้นหาไม่สำเร็จ');
 
-      // ดึง clan จาก ReadOnly Data (ถ้ามี)
-      const clan = await getClanReadOnly(id);
+      const clan = await getClanViaCloudScript(id);
 
-      // แสดงผล
       $('card').classList.remove('hidden');
       $('playFabId').textContent = id;
       $('displayName').textContent = acc.info.displayName || '—';
       $('username').textContent = acc.info.username ? `@${acc.info.username}` : '—';
       $('created').textContent = fmt(acc.info.created);
-      $('lastLogin').textContent = fmt(acc.info.lastLogin);
-      $('origination').textContent = acc.info.origination || '—';
-      $('clan').textContent = clan.ok ? (clan.text || '(ไม่พบข้อมูลแคลนใน ReadOnly Data)') : '—';
+      $('clan').textContent = (clan.ok && clan.clans?.length)
+        ? clan.clans.map(c => `${c.name} (${c.id})`).join(', ')
+        : '(ไม่อยู่แคลน หรือไม่พบข้อมูล)';
       $('stamp').textContent = `Player ID: ${id} | ${new Date().toLocaleString()}`;
     });
   </script>
