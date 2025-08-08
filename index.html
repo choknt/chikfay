@@ -4,186 +4,251 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PlayFab Login</title>
-
-  <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-
-  <!-- ฟอนต์ไทย (ไม่บังคับ) -->
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet" />
-  <style> body{ font-family: 'Sarabun', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; } </style>
-
-  <!-- PlayFab JavaScript SDK (ต้องมาก่อนสคริปต์ของเรา) -->
+  <style> body{ font-family:'Sarabun',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial; } </style>
   <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-  <!-- กล่องฟอร์ม -->
-  <div id="formContainer" class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6">
+  <div id="formContainer" class="bg-white w-full max-w-md rounded-xl shadow-lg p-6">
     <h1 class="text-2xl font-semibold text-center text-gray-800 mb-1">เข้าสู่ระบบผู้เล่น</h1>
-    <p class="text-center text-gray-500 mb-6">PlayFab Login (Username & Password)</p>
+    <p class="text-center text-gray-500 mb-6">PlayFab Client API</p>
 
     <div id="alertBox" class="hidden mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm"></div>
+    <div id="infoBox" class="hidden mb-4 rounded-md border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2 text-sm"></div>
 
-    <label class="block text-sm font-medium text-gray-700 mb-1" for="username">ชื่อผู้ใช้ (Username)</label>
-    <input id="username" type="text" autocomplete="username"
-           class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
-           placeholder="เช่น myplayer01" />
+    <!-- Switch login method -->
+    <div class="mb-4 grid grid-cols-2 gap-2">
+      <button id="tabUser" class="rounded-lg border px-3 py-2 bg-gray-900 text-white">Username</button>
+      <button id="tabEmail" class="rounded-lg border px-3 py-2 bg-white">Email</button>
+    </div>
 
-    <label class="block text-sm font-medium text-gray-700 mb-1" for="password">รหัสผ่าน (Password)</label>
-    <div class="relative mb-6">
-      <input id="password" type="password" autocomplete="current-password"
-             class="w-full rounded-lg border-gray-300 px-3 py-2 pr-12 focus:border-blue-500 focus:ring-blue-200"
-             placeholder="••••••••" />
-      <button type="button" id="togglePw"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm px-2 py-1 rounded hover:bg-gray-100">
-        แสดง
+    <!-- Username login -->
+    <div id="userLogin">
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="username">ชื่อผู้ใช้ (Username)</label>
+      <input id="username" type="text" autocomplete="username"
+             class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
+             placeholder="เช่น myplayer01" />
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="passwordU">รหัสผ่าน (Password)</label>
+      <div class="relative mb-6">
+        <input id="passwordU" type="password" autocomplete="current-password"
+               class="w-full rounded-lg border-gray-300 px-3 py-2 pr-12 focus:border-blue-500 focus:ring-blue-200"
+               placeholder="••••••••" />
+        <button type="button" data-target="passwordU"
+                class="togglePw absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm px-2 py-1 rounded hover:bg-gray-100">
+          แสดง
+        </button>
+      </div>
+      <button id="loginUserBtn" type="button"
+              class="w-full rounded-lg bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+        เข้าสู่ระบบ (Username)
       </button>
     </div>
 
-    <button id="loginButton" type="button"
-            class="w-full rounded-lg bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
-      เข้าสู่ระบบ
+    <!-- Email login -->
+    <div id="emailLogin" class="hidden">
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="email">อีเมล (Email)</label>
+      <input id="email" type="email" autocomplete="email"
+             class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
+             placeholder="you@example.com" />
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="passwordE">รหัสผ่าน (Password)</label>
+      <div class="relative mb-6">
+        <input id="passwordE" type="password" autocomplete="current-password"
+               class="w-full rounded-lg border-gray-300 px-3 py-2 pr-12 focus:border-blue-500 focus:ring-blue-200"
+               placeholder="••••••••" />
+        <button type="button" data-target="passwordE"
+                class="togglePw absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm px-2 py-1 rounded hover:bg-gray-100">
+          แสดง
+        </button>
+      </div>
+      <button id="loginEmailBtn" type="button"
+              class="w-full rounded-lg bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+        เข้าสู่ระบบ (Email)
+      </button>
+    </div>
+
+    <div class="my-6 border-t"></div>
+
+    <!-- Register -->
+    <h2 class="text-lg font-semibold mb-3">ยังไม่มีบัญชี? สมัครใหม่</h2>
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="regEmail">อีเมล (จำเป็น)</label>
+    <input id="regEmail" type="email" class="mb-3 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200" placeholder="you@example.com" />
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="regPassword">รหัสผ่าน</label>
+    <input id="regPassword" type="password" class="mb-3 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200" placeholder="อย่างน้อย 6 ตัวอักษร" />
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="regUsername">Username (ถ้าต้องการล็อกอินด้วย Username)</label>
+    <input id="regUsername" type="text" class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200" placeholder="ตั้งชื่อผู้ใช้" />
+
+    <button id="registerBtn" type="button"
+            class="w-full rounded-lg bg-emerald-600 text-white py-2.5 font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60">
+      สมัครบัญชีใหม่
     </button>
 
     <p class="text-xs text-gray-400 mt-4 text-center">
-      หมายเหตุ: หน้านี้ใช้ PlayFab Client API จึงไม่ต้องใช้ API Key/Secret
+      หมายเหตุ: หากคุณสมัครโดยไม่ใส่ Username จะล็อกอินด้วย Email+Password เท่านั้น
     </p>
   </div>
 
-  <!-- หน้าหลังล็อกอิน -->
+  <!-- หลังล็อกอิน -->
   <div id="messageContainer" class="hidden text-center">
     <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-8">
       <h2 class="text-2xl font-bold text-green-600">ล็อกอินสำเร็จ</h2>
       <p class="mt-3 text-gray-700">ล็อกอินสำเร็จในชื่อผู้เล่น: <span id="playerName" class="font-semibold"></span></p>
-      <p class="mt-1 text-sm text-gray-500">Session พร้อมเรียก API ฝั่ง Client ต่อได้</p>
-      <button id="backBtn"
-              class="mt-6 rounded-lg bg-gray-800 text-white px-4 py-2 hover:bg-gray-900">
-        ออกจากระบบ / กลับ
-      </button>
+      <button id="backBtn" class="mt-6 rounded-lg bg-gray-800 text-white px-4 py-2 hover:bg-gray-900">ออกจากระบบ / กลับ</button>
     </div>
   </div>
 
-  <!-- สคริปต์หลัก -->
   <script>
-    // >>>>> ใส่ Title ID ของคุณที่นี่ <<<<<
-    var PLAYFAB_TITLE_ID = "2F5F0";
-
-    // ป้องกันกรณี SDK โหลดไม่สำเร็จ
+    // ====== ตั้งค่า Title ID ======
+    var PLAYFAB_TITLE_ID = "YOUR_PLAYFAB_TITLE_ID";
     if (typeof PlayFabClientSDK === 'undefined') {
-      document.getElementById('alertBox').classList.remove('hidden');
-      document.getElementById('alertBox').textContent = 'โหลด PlayFab SDK ไม่สำเร็จ กรุณารีเฟรชหน้า หรือเช็คเครือข่าย';
+      showError('โหลด PlayFab SDK ไม่สำเร็จ กรุณารีเฟรชหน้า');
     } else {
       PlayFab.settings.titleId = PLAYFAB_TITLE_ID;
     }
 
-    // Helper
+    // ====== Helpers ======
     function $(id){ return document.getElementById(id); }
-
-    function setLoading(loading){
-      const btn = $('loginButton');
-      if (loading) {
-        btn.disabled = true;
-        btn.textContent = 'กำลังเข้าสู่ระบบ...';
-      } else {
-        btn.disabled = false;
-        btn.textContent = 'เข้าสู่ระบบ';
-      }
+    function showError(msg){ const b=$('alertBox'); b.textContent=msg; b.classList.remove('hidden'); }
+    function hideError(){ $('alertBox').classList.add('hidden'); }
+    function info(msg){ const b=$('infoBox'); b.textContent=msg; b.classList.remove('hidden'); }
+    function hideInfo(){ $('infoBox').classList.add('hidden'); }
+    function setBusy(btn, busy, labelBusy, labelIdle){
+      btn.disabled = !!busy;
+      btn.textContent = busy ? labelBusy : labelIdle;
+    }
+    function getSafePlayerName(accountInfo, fallback){
+      if (accountInfo && accountInfo.TitleInfo && accountInfo.TitleInfo.DisplayName) return accountInfo.TitleInfo.DisplayName;
+      if (accountInfo && accountInfo.Username) return accountInfo.Username;
+      return fallback || 'ผู้เล่น';
+    }
+    function onLoggedIn(fallbackName){
+      PlayFabClientSDK.GetAccountInfo({}, function(infoOk, infoErr){
+        if (!infoOk) { showError('ล็อกอินสำเร็จ แต่ดึงข้อมูลผู้เล่นไม่สำเร็จ'); return; }
+        const ai = infoOk.data ? infoOk.data.AccountInfo : infoOk.AccountInfo;
+        $('playerName').textContent = getSafePlayerName(ai, fallbackName);
+        $('formContainer').classList.add('hidden');
+        $('messageContainer').classList.remove('hidden');
+      });
     }
 
-    function showError(msg){
-      const box = $('alertBox');
-      box.textContent = msg;
-      box.classList.remove('hidden');
-    }
-    function hideError(){
-      $('alertBox').classList.add('hidden');
-    }
-
-    function getSafePlayerName(accountInfo, fallbackUsername){
-      // พยายามใช้ DisplayName ก่อน ถ้าไม่มีใช้ Username
-      if (accountInfo && accountInfo.TitleInfo && accountInfo.TitleInfo.DisplayName) {
-        return accountInfo.TitleInfo.DisplayName;
-      }
-      if (accountInfo && accountInfo.Username) {
-        return accountInfo.Username;
-      }
-      return fallbackUsername || 'ผู้เล่น';
-    }
-
-    // Toggle password visibility
-    $('togglePw').addEventListener('click', function(){
-      const pw = $('password');
-      const isPw = pw.type === 'password';
-      pw.type = isPw ? 'text' : 'password';
-      this.textContent = isPw ? 'ซ่อน' : 'แสดง';
-    });
-
-    // Enter เพื่อกดล็อกอิน
-    ['username','password'].forEach(id=>{
-      $(id).addEventListener('keydown', e=>{
-        if (e.key === 'Enter') $('loginButton').click();
+    // ====== Toggle password ======
+    document.querySelectorAll('.togglePw').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const target = $(this.dataset.target);
+        const isPw = target.type === 'password';
+        target.type = isPw ? 'text' : 'password';
+        this.textContent = isPw ? 'ซ่อน' : 'แสดง';
       });
     });
 
-    // ปุ่มล็อกอิน
-    $('loginButton').addEventListener('click', function(){
-      hideError();
+    // ====== Tabs ======
+    $('tabUser').addEventListener('click', ()=>{
+      $('tabUser').classList.add('bg-gray-900','text-white');
+      $('tabEmail').classList.remove('bg-gray-900','text-white');
+      $('userLogin').classList.remove('hidden');
+      $('emailLogin').classList.add('hidden');
+      hideError(); hideInfo();
+    });
+    $('tabEmail').addEventListener('click', ()=>{
+      $('tabEmail').classList.add('bg-gray-900','text-white');
+      $('tabUser').classList.remove('bg-gray-900','text-white');
+      $('emailLogin').classList.remove('hidden');
+      $('userLogin').classList.add('hidden');
+      hideError(); hideInfo();
+    });
+
+    // ====== Login with Username ======
+    $('loginUserBtn').addEventListener('click', function(){
+      hideError(); hideInfo();
+      if (!PLAYFAB_TITLE_ID || PLAYFAB_TITLE_ID === 'YOUR_PLAYFAB_TITLE_ID') return showError('ยังไม่ได้ตั้งค่า Title ID');
       const username = $('username').value.trim();
-      const password = $('password').value.trim();
+      const password = $('passwordU').value.trim();
+      if (!username || !password) return showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
 
-      if (!PLAYFAB_TITLE_ID || PLAYFAB_TITLE_ID === 'YOUR_PLAYFAB_TITLE_ID') {
-        showError('ยังไม่ได้ตั้งค่า Title ID (กรุณาแก้ตัวแปร PLAYFAB_TITLE_ID ในสคริปต์)');
-        return;
-      }
-      if (!username || !password) {
-        showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
-        return;
-      }
-      if (typeof PlayFabClientSDK === 'undefined') {
-        showError('ไม่พบ PlayFabClientSDK กรุณารีเฟรชหน้า');
-        return;
-      }
-
-      setLoading(true);
-
-      PlayFabClientSDK.LoginWithPlayFab({
-        TitleId: PLAYFAB_TITLE_ID,
-        Username: username,
-        Password: password
-      }, function(result, error){
-        if (!result) {
-          const msg = (error && error.errorMessage) || 'ไม่สามารถเข้าสู่ระบบได้';
-          setLoading(false);
-          showError('เกิดข้อผิดพลาดในการล็อกอิน: ' + msg);
-          return;
-        }
-
-        // ได้ Session แล้ว -> ขอข้อมูลผู้เล่น
-        PlayFabClientSDK.GetAccountInfo({}, function(infoResult, infoError){
-          setLoading(false);
-          if (!infoResult) {
-            showError('ล็อกอินสำเร็จ แต่ดึงข้อมูลผู้เล่นไม่สำเร็จ');
+      setBusy(this, true, 'กำลังเข้าสู่ระบบ...', 'เข้าสู่ระบบ (Username)');
+      PlayFabClientSDK.LoginWithPlayFab({ TitleId: PLAYFAB_TITLE_ID, Username: username, Password: password },
+        (ok, err)=>{
+          setBusy($('loginUserBtn'), false, '', 'เข้าสู่ระบบ (Username)');
+          if (!ok) {
+            const msg = (err && err.errorMessage) || '';
+            if (msg.includes('User not found')) {
+              info('ไม่พบบัญชีนี้ใน Title ปัจจุบัน: ตรวจสอบ Title ID หรือใช้แท็บ Email ถ้าคุณสมัครด้วยอีเมล');
+            } else if (msg.includes('Invalid username or password')) {
+              showError('Username หรือรหัสผ่านไม่ถูกต้อง');
+            } else {
+              showError('ล็อกอินไม่สำเร็จ: ' + (msg || 'Unknown error'));
+            }
             return;
           }
+          onLoggedIn(username);
+        }
+      );
+    });
 
-          // รองรับทั้งรูปแบบ data.AccountInfo และ AccountInfo (ต่างกันตามเวอร์ชัน SDK)
-          var accountInfo = infoResult.data ? infoResult.data.AccountInfo : infoResult.AccountInfo;
-          var playerName = getSafePlayerName(accountInfo, username);
+    // ====== Login with Email ======
+    $('loginEmailBtn').addEventListener('click', function(){
+      hideError(); hideInfo();
+      if (!PLAYFAB_TITLE_ID || PLAYFAB_TITLE_ID === 'YOUR_PLAYFAB_TITLE_ID') return showError('ยังไม่ได้ตั้งค่า Title ID');
+      const email = $('email').value.trim();
+      const password = $('passwordE').value.trim();
+      if (!email || !password) return showError('กรุณากรอกอีเมลและรหัสผ่าน');
 
-          $('playerName').textContent = playerName;
-          $('formContainer').classList.add('hidden');
-          $('messageContainer').classList.remove('hidden');
-        });
+      setBusy(this, true, 'กำลังเข้าสู่ระบบ...', 'เข้าสู่ระบบ (Email)');
+      PlayFabClientSDK.LoginWithEmailAddress({ TitleId: PLAYFAB_TITLE_ID, Email: email, Password: password },
+        (ok, err)=>{
+          setBusy($('loginEmailBtn'), false, '', 'เข้าสู่ระบบ (Email)');
+          if (!ok) {
+            const msg = (err && err.errorMessage) || '';
+            if (msg.includes('User not found')) {
+              info('ไม่พบบัญชีอีเมลนี้: คุณอาจยังไม่สมัครบัญชี ลองกด “สมัครบัญชีใหม่” ด้านล่าง');
+            } else if (msg.includes('Invalid email or password')) {
+              showError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+            } else {
+              showError('ล็อกอินไม่สำเร็จ: ' + (msg || 'Unknown error'));
+            }
+            return;
+          }
+          onLoggedIn(email);
+        }
+      );
+    });
+
+    // ====== Register ======
+    $('registerBtn').addEventListener('click', function(){
+      hideError(); hideInfo();
+      if (!PLAYFAB_TITLE_ID || PLAYFAB_TITLE_ID === 'YOUR_PLAYFAB_TITLE_ID') return showError('ยังไม่ได้ตั้งค่า Title ID');
+      const email = $('regEmail').value.trim();
+      const password = $('regPassword').value.trim();
+      const username = $('regUsername').value.trim();
+
+      if (!email || !password) return showError('กรุณากรอกอีเมลและรหัสผ่านสำหรับสมัคร');
+      if (password.length < 6) return showError('รหัสผ่านอย่างน้อย 6 ตัวอักษร');
+
+      setBusy(this, true, 'กำลังสมัคร...', 'สมัครบัญชีใหม่');
+      PlayFabClientSDK.RegisterPlayFabUser({
+        TitleId: PLAYFAB_TITLE_ID,
+        Email: email,
+        Password: password,
+        Username: username || undefined,   // ถ้าไม่ใส่ จะใช้ล็อกอินด้วย Email ได้อย่างเดียว
+        RequireBothUsernameAndEmail: false // ให้สมัครด้วยอีเมลอย่างเดียวก็ได้
+      }, (ok, err)=>{
+        setBusy($('registerBtn'), false, '', 'สมัครบัญชีใหม่');
+        if (!ok) {
+          const msg = (err && err.errorMessage) || 'สมัครไม่สำเร็จ';
+          showError(msg);
+          return;
+        }
+        info('สมัครสำเร็จ! ตอนนี้คุณสามารถล็อกอินด้วย ' + (username ? 'Username หรือ Email' : 'Email') + ' ได้ทันที');
       });
     });
 
-    // ปุ่มกลับ/ออกจากระบบ
-    $('backBtn').addEventListener('click', function(){
+    // ====== Back / Logout (จริงๆ แค่ล้าง UI ฝั่ง client) ======
+    $('backBtn').addEventListener('click', ()=>{
       $('messageContainer').classList.add('hidden');
       $('formContainer').classList.remove('hidden');
-      $('username').value = '';
-      $('password').value = '';
-      hideError();
+      hideError(); hideInfo();
+      ['username','passwordU','email','passwordE','regEmail','regPassword','regUsername'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
     });
   </script>
 </body>
