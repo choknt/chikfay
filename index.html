@@ -3,120 +3,135 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lookup Player Name by PlayFabId</title>
-  <!-- Tailwind (CDN) -->
+  <title>Player Profile Lookup (PlayFabId → Profile & Clan)</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-  <!-- ฟอนต์ไทย (ทางเลือก) -->
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet" />
   <style> body{ font-family:'Sarabun',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial; } </style>
-  <!-- PlayFab Client SDK -->
   <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-6">
-    <h1 class="text-2xl font-semibold text-center text-gray-800 mb-1">ค้นหาชื่อผู้เล่นด้วย PlayFabId</h1>
-    <p class="text-center text-gray-500 mb-6">Title ID: <b>2F5F0</b></p>
+<body class="bg-zinc-900 min-h-screen flex items-center justify-center p-4 text-zinc-100">
+  <div class="bg-zinc-800 w-full max-w-xl rounded-2xl shadow-xl p-6">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1.5 h-8 rounded bg-indigo-400"></div>
+      <h1 class="text-2xl font-semibold">Player Profile</h1>
+      <span class="ml-auto text-sm opacity-75">Title: <b>2F5F0</b></span>
+    </div>
 
-    <div id="alertBox" class="hidden mb-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm"></div>
-    <div id="infoBox"  class="hidden mb-4 rounded-md border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2 text-sm"></div>
+    <div id="alert" class="hidden mb-4 rounded-md border border-red-400/30 bg-red-900/40 text-red-200 px-3 py-2 text-sm"></div>
 
-    <label class="block text-sm font-medium text-gray-700 mb-1" for="playFabId">Title Player Account ID (PlayFabId)</label>
-    <input id="playFabId" type="text" class="mb-4 w-full rounded-lg border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-200"
-           placeholder="เช่น 2CD9EC55674481C3" />
+    <label for="pfid" class="block text-sm mb-1 opacity-80">Title Player Account ID (PlayFabId)</label>
+    <input id="pfid" type="text" class="mb-4 w-full rounded-lg bg-zinc-900 border-zinc-700 px-3 py-2 focus:border-indigo-400 focus:ring-indigo-300"
+           placeholder="เช่น 8C7EE7546DFB52BE" />
 
-    <button id="lookupBtn"
-      class="w-full rounded-lg bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
-      ค้นหาชื่อผู้เล่น
-    </button>
+    <button id="lookup" class="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white py-2.5 font-medium">ค้นหา</button>
 
-    <div class="mt-6 border-t pt-4">
-      <p class="text-gray-700">ผลลัพธ์:</p>
-      <div id="result" class="mt-2 text-lg font-semibold text-gray-900">—</div>
+    <div id="card" class="hidden mt-6 rounded-xl bg-zinc-900/60 border border-zinc-700 p-5">
+      <div class="flex items-start gap-3">
+        <div>
+          <div id="displayName" class="text-xl font-bold">—</div>
+          <div id="username" class="text-sm opacity-70">—</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 text-sm">
+        <div><div class="opacity-60">Player ID</div><div id="playFabId" class="font-medium break-all">—</div></div>
+        <div><div class="opacity-60">Created</div><div id="created" class="font-medium">—</div></div>
+        <div><div class="opacity-60">Last Login</div><div id="lastLogin" class="font-medium">—</div></div>
+        <div><div class="opacity-60">Origination</div><div id="origination" class="font-medium">—</div></div>
+        <div class="col-span-2 md:col-span-3">
+          <div class="opacity-60">Clan</div>
+          <div id="clan" class="font-medium">—</div>
+        </div>
+      </div>
+
+      <div id="stamp" class="mt-4 text-xs opacity-60">—</div>
     </div>
   </div>
 
   <script>
-    const TITLE_ID = "F7659"; // Title ID ตายตัว
-
+    const TITLE_ID = "2F5F0";
     function $(id){ return document.getElementById(id); }
-    function showError(msg){ const b=$('alertBox'); b.textContent=msg; b.classList.remove('hidden'); }
-    function hideError(){ $('alertBox').classList.add('hidden'); }
-    function info(msg){ const b=$('infoBox'); b.textContent=msg; b.classList.remove('hidden'); }
-    function hideInfo(){ $('infoBox').classList.add('hidden'); }
-    function setBusy(b){ const btn=$('lookupBtn'); btn.disabled=!!b; btn.textContent=b?'กำลังค้นหา...':'ค้นหาชื่อผู้เล่น'; }
+    function err(msg){ const a=$('alert'); a.textContent=msg; a.classList.remove('hidden'); }
+    function clearErr(){ $('alert').classList.add('hidden'); }
+    function fmt(dt){ if(!dt) return '—'; const d=new Date(dt); if(isNaN(d)) return dt; return d.toLocaleString(); }
 
     let sessionReady = false;
-
-    async function ensureTempLogin(){
-      return new Promise(resolve=>{
-        if (sessionReady) return resolve(true);
-
-        if (typeof PlayFabClientSDK === 'undefined') {
-          showError('โหลด PlayFab SDK ไม่สำเร็จ'); return resolve(false);
-        }
+    async function ensureLogin(){
+      return new Promise(res=>{
+        if(sessionReady) return res(true);
+        if(typeof PlayFabClientSDK==='undefined'){ err('โหลด PlayFab SDK ไม่สำเร็จ'); return res(false); }
         PlayFab.settings.titleId = TITLE_ID;
-
-        const customId = 'web-lookup-' + Math.random().toString(36).slice(2);
-        PlayFabClientSDK.LoginWithCustomID({
-          TitleId: TITLE_ID,
-          CustomId: customId,
-          CreateAccount: true
-        }, function(ok, err){
-          if (!ok) {
-            showError('Login ชั่วคราวไม่สำเร็จ: ' + ((err && err.errorMessage) || ''));
-            return resolve(false);
-          }
-          sessionReady = true;
-          resolve(true);
+        const cid = 'lookup-'+Math.random().toString(36).slice(2);
+        PlayFabClientSDK.LoginWithCustomID({ TitleId: TITLE_ID, CustomId: cid, CreateAccount: true }, (ok, e)=>{
+          if(!ok){ err('Login ชั่วคราวล้มเหลว: '+(e?.errorMessage||'')); return res(false); }
+          sessionReady = true; res(true);
         });
       });
     }
 
-    function getNiceNameFromAccountInfo(accInfo){
-      const a = accInfo?.data?.AccountInfo || accInfo?.AccountInfo || null;
-      if (!a) return null;
-      const dn = a?.TitleInfo?.DisplayName;
-      if (dn) return dn;
-      return a?.Username || null;
-    }
-
-    function lookupNameByPlayFabId(playFabId){
-      return new Promise(resolve=>{
-        PlayFabClientSDK.GetAccountInfo({ PlayFabId: playFabId }, function(ok, err){
-          if (!ok) {
-            return resolve({ ok:false, error: (err && err.errorMessage) || 'GetAccountInfo failed' });
-          }
-          const name = getNiceNameFromAccountInfo(ok);
-          resolve({ ok:true, name });
+    function getAccountInfo(playFabId){
+      return new Promise(res=>{
+        PlayFabClientSDK.GetAccountInfo({ PlayFabId: playFabId }, (ok, e)=>{
+          if(!ok) return res({ ok:false, error: e?.errorMessage||'GetAccountInfo failed' });
+          const a = ok.data?.AccountInfo || ok.AccountInfo || {};
+          const info = {
+            displayName: a?.TitleInfo?.DisplayName || null,
+            username: a?.Username || null,
+            created: a?.TitleInfo?.Created || null,
+            lastLogin: a?.TitleInfo?.LastLogin || null,
+            origination: a?.TitleInfo?.Origination || null
+          };
+          res({ ok:true, info });
         });
       });
     }
 
-    $('lookupBtn').addEventListener('click', async ()=>{
-      hideError(); hideInfo(); $('result').textContent = '—';
+    function getClanReadOnly(playFabId){
+      return new Promise(res=>{
+        PlayFabClientSDK.GetUserReadOnlyData({ PlayFabId: playFabId, Keys: ["clanName","clanTag","clanId"] }, (ok, e)=>{
+          if(!ok) return res({ ok:false, error: e?.errorMessage||'GetUserReadOnlyData failed' });
+          const d = ok.data?.Data || {};
+          const name = d.clanName?.Value || null;
+          const tag  = d.clanTag?.Value || null;
+          const id   = d.clanId?.Value || null;
+          let text = null;
+          if(name || tag || id){
+            text = `${tag?`[${tag}] `:''}${name||''}${id?` (${id})`:''}`.trim();
+          }
+          res({ ok:true, text });
+        });
+      });
+    }
 
-      const playFabId = $('playFabId').value.trim();
-      if (!playFabId) return showError('กรุณากรอก PlayFabId');
+    $('lookup').addEventListener('click', async ()=>{
+      clearErr();
+      const id = $('pfid').value.trim();
+      if(!id) return err('กรุณากรอก PlayFabId');
 
-      setBusy(true);
-      const okLogin = await ensureTempLogin();
-      if (!okLogin) { setBusy(false); return; }
+      // login session ชั่วคราว
+      const okLogin = await ensureLogin();
+      if(!okLogin) return;
 
-      const res = await lookupNameByPlayFabId(playFabId);
-      setBusy(false);
-
-      if (!res.ok) {
-        showError(res.error || 'ค้นหาไม่สำเร็จ');
+      // ดึงโปรไฟล์พื้นฐาน
+      const acc = await getAccountInfo(id);
+      if(!acc.ok){
+        err(acc.error || 'ค้นหาไม่สำเร็จ');
         return;
       }
 
-      if (!res.name) {
-        info('พบผู้เล่น แต่ยังไม่มี DisplayName/Username ที่ตั้งไว้');
-        $('result').textContent = '(ไม่มีชื่อที่ตั้งไว้)';
-        return;
-      }
+      // ดึง clan จาก ReadOnly Data (ถ้ามี)
+      const clan = await getClanReadOnly(id);
 
-      $('result').textContent = res.name;
+      // แสดงผล
+      $('card').classList.remove('hidden');
+      $('playFabId').textContent = id;
+      $('displayName').textContent = acc.info.displayName || '—';
+      $('username').textContent = acc.info.username ? `@${acc.info.username}` : '—';
+      $('created').textContent = fmt(acc.info.created);
+      $('lastLogin').textContent = fmt(acc.info.lastLogin);
+      $('origination').textContent = acc.info.origination || '—';
+      $('clan').textContent = clan.ok ? (clan.text || '(ไม่พบข้อมูลแคลนใน ReadOnly Data)') : '—';
+      $('stamp').textContent = `Player ID: ${id} | ${new Date().toLocaleString()}`;
     });
   </script>
 </body>
